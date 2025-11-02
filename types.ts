@@ -1,3 +1,4 @@
+
 export enum EventType {
   EVP = "EVP Capture",
   EMF = "EMF Spike",
@@ -14,8 +15,8 @@ export interface ParanormalEvent {
   id: number;
   type: EventType;
   intensity: Intensity;
-  x: number; // GPS longitude mapped to X
-  y: number; // GPS latitude mapped to Y
+  lon: number; // Longitude
+  lat: number; // Latitude
   description: string;
   logId?: string; // Link to Winchester Logs
 }

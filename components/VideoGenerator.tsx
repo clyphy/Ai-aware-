@@ -59,7 +59,7 @@ const VideoGenerator: React.FC = () => {
         if (isLoading) {
             // FIX: The return type of setInterval in browser environments is `number`, not `NodeJS.Timeout`.
             // This refactor also prevents a potential bug with calling clearInterval on an uninitialized variable.
-            const interval = setInterval(() => {
+            const interval: number = setInterval(() => {
                 setLoadingMessage(prev => {
                     const currentIndex = LOADING_MESSAGES.indexOf(prev);
                     return LOADING_MESSAGES[(currentIndex + 1) % LOADING_MESSAGES.length];

@@ -73,6 +73,14 @@
         50% { transform: scale(1.25); opacity: 1; }
       }
 
+      @keyframes user-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.5); opacity: 0.7; }
+      }
+      .user-location-marker {
+        animation: user-pulse 2s ease-in-out infinite;
+      }
+
       .pulse-silver {
         animation: subtle-pulse 5s ease-in-out infinite;
       }
@@ -286,6 +294,19 @@
         padding: 1rem;
         border-radius: 0.5rem;
         box-shadow: 0 0 10px rgba(255, 191, 0, 0.2);
+      }
+      
+      /* Holographic Map Grid Animation */
+      @keyframes graticule-scan {
+        0% { stroke-dashoffset: 0; opacity: 0.4; }
+        50% { stroke-dashoffset: 1000; opacity: 0.7; }
+        100% { stroke-dashoffset: 2000; opacity: 0.4; }
+      }
+      .graticule {
+        stroke: rgba(0, 255, 255, 0.4); /* Brighter cyan */
+        stroke-width: 0.8; /* Slightly thicker */
+        stroke-dasharray: 100 50; /* Dashed line for effect */
+        animation: graticule-scan 15s linear infinite;
       }
     </style>
   <script type="importmap">

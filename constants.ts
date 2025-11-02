@@ -3,6 +3,12 @@ import { ParanormalEvent, EventType, Intensity, WinchesterLog } from './types';
 export const MAP_WIDTH = 1200;
 export const MAP_HEIGHT = 800;
 
+// Bounding box for Turtle Mountain, roughly [lon_min, lat_min], [lon_max, lat_max]
+export const TURTLE_MOUNTAIN_BOUNDS: [[number, number], [number, number]] = [
+  [-100.5, 48.7], // Southwest corner
+  [-100.0, 49.0]  // Northeast corner
+];
+
 export const WINCHESTER_LOGS: WinchesterLog[] = [
   { 
     id: "WL-001", 
@@ -30,24 +36,23 @@ export const WINCHESTER_LOGS: WinchesterLog[] = [
 
 export const PARANORMAL_EVENTS: ParanormalEvent[] = [
   // High-Resonance Hotspots
-  { id: 1, type: EventType.EVP, intensity: Intensity.HIGH, x: 250, y: 300, description: "Class A EVP: '...no hope...abandoned...'", logId: "WL-001" },
-  { id: 2, type: EventType.SIGHTING, intensity: Intensity.HIGH, x: 800, y: 550, description: "Full-body apparition in black mirror." },
-  { id: 3, type: EventType.EMF, intensity: Intensity.HIGH, x: 950, y: 200, description: "Extreme EMF fluctuation, > 50mG." },
+  { id: 1, type: EventType.EVP, intensity: Intensity.HIGH, lon: -100.396, lat: 48.888, description: "Class A EVP: '...no hope...abandoned...'", logId: "WL-001" },
+  { id: 2, type: EventType.SIGHTING, intensity: Intensity.HIGH, lon: -100.167, lat: 48.794, description: "Full-body apparition in black mirror." },
+  { id: 3, type: EventType.EMF, intensity: Intensity.HIGH, lon: -100.104, lat: 48.925, description: "Extreme EMF fluctuation, > 50mG." },
   
   // Medium Resonance Events
-  { id: 4, type: EventType.EMF, intensity: Intensity.MEDIUM, x: 150, y: 500, description: "Sustained EMF field of 15mG." },
-  { id: 5, type: EventType.EVP, intensity: Intensity.MEDIUM, x: 400, y: 450, description: "Disembodied whisper, sounds like '...can't escape...'", logId: "WL-002"},
-  { id: 6, type: EventType.SIGHTING, intensity: Intensity.MEDIUM, x: 600, y: 250, description: "Shadow figure darting at periphery." },
-  { id: 7, type: EventType.EVP, intensity: Intensity.MEDIUM, x: 1050, y: 400, description: "Child's laughter, no source." },
+  { id: 4, type: EventType.EMF, intensity: Intensity.MEDIUM, lon: -100.438, lat: 48.813, description: "Sustained EMF field of 15mG." },
+  { id: 5, type: EventType.EVP, intensity: Intensity.MEDIUM, lon: -100.333, lat: 48.831, description: "Disembodied whisper, sounds like '...can't escape...'", logId: "WL-002"},
+  { id: 6, type: EventType.SIGHTING, intensity: Intensity.MEDIUM, lon: -100.250, lat: 48.906, description: "Shadow figure darting at periphery." },
+  { id: 7, type: EventType.EVP, intensity: Intensity.MEDIUM, lon: -100.063, lat: 48.850, description: "Child's laughter, no source." },
 
   // Fading Echoes (Low Intensity)
-  { id: 8, type: EventType.EMF, intensity: Intensity.LOW, x: 100, y: 100, description: "Minor EMF spike, 2-3mG." },
-  { id: 9, type: EventType.SIGHTING, intensity: Intensity.LOW, x: 300, y: 150, description: "Faint shimmer in reflective surface." },
-  { id: 10, type: EventType.EVP, intensity: Intensity.LOW, x: 500, y: 600, description: "Distant, metallic sound." },
-  { id: 11, type: EventType.EMF, intensity: Intensity.LOW, x: 750, y: 700, description: "Brief EMF pulse." },
-  { id: 12, type: EventType.SIGHTING, intensity: Intensity.LOW, x: 900, y: 50, description: "Mist-like formation, quickly dissipated." },
-  { id: 13, type: EventType.EMF, intensity: Intensity.LOW, x: 1100, y: 650, description: "Cold spot correlated with EMF dip." },
-  { id: 14, type: EventType.EVP, intensity: Intensity.LOW, x: 450, y: 320, description: "Static burst with rhythmic pattern." },
-  // FIX: Removed duplicate 'intensity' property.
-  { id: 15, type: EventType.EVP, intensity: Intensity.HIGH, x: 270, y: 280, description: "Overlapping voices discussing 'the lie'.", logId: "WL-003" },
+  { id: 8, type: EventType.EMF, intensity: Intensity.LOW, lon: -100.458, lat: 48.963, description: "Minor EMF spike, 2-3mG." },
+  { id: 9, type: EventType.SIGHTING, intensity: Intensity.LOW, lon: -100.375, lat: 48.944, description: "Faint shimmer in reflective surface." },
+  { id: 10, type: EventType.EVP, intensity: Intensity.LOW, lon: -100.292, lat: 48.775, description: "Distant, metallic sound." },
+  { id: 11, type: EventType.EMF, intensity: Intensity.LOW, lon: -100.188, lat: 48.738, description: "Brief EMF pulse." },
+  { id: 12, type: EventType.SIGHTING, intensity: Intensity.LOW, lon: -100.125, lat: 48.981, description: "Mist-like formation, quickly dissipated." },
+  { id: 13, type: EventType.EMF, intensity: Intensity.LOW, lon: -100.042, lat: 48.756, description: "Cold spot correlated with EMF dip." },
+  { id: 14, type: EventType.EVP, intensity: Intensity.LOW, lon: -100.313, lat: 48.880, description: "Static burst with rhythmic pattern." },
+  { id: 15, type: EventType.EVP, intensity: Intensity.HIGH, lon: -100.388, lat: 48.895, description: "Overlapping voices discussing 'the lie'.", logId: "WL-003" },
 ];

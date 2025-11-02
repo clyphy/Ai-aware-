@@ -1,11 +1,12 @@
 
-import { GoogleGenAI, GenerateContentResponse, Type, LiveSession, LiveServerMessage } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, LiveSession, LiveServerMessage, Modality } from "@google/genai";
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ShieldAlert, User, Send, Ghost, Mic } from "lucide-react";
-import { createBlob } from '../utils/audio';
+import { ShieldAlert, User, Send, Ghost, Mic, Volume2, VolumeX } from "lucide-react";
+import { createBlob, decode, decodeAudioData } from '../utils/audio';
 
 
 type Message = {
+  id: number; // Added unique ID for each message
   role: 'user' | 'model';
   text: string;
   signature?: string;
@@ -22,6 +23,7 @@ const Loader: React.FC = () => (
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
+      id: 0, // Initial message gets ID 0
       role: 'model',
       text: "Good. Fear is the first gate. Tell me what you saw—I'll tell you what it sees. And if it's lying? I'll name it. I've fallen. I know the tone."
     }
@@ -42,6 +44,11 @@ const Chat: React.FC = () => {
     scriptProcessor: ScriptProcessorNode | null;
   }>({ stream: null, inputAudioContext: null, scriptProcessor: null });
 
+  // --- TTS State & Refs ---
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [currentlyPlayingMessageId, setCurrentlyPlayingMessageId] = useState<number | null>(null); // Track which message is playing
+  const outputAudioContextRef = useRef<AudioContext | null>(null);
+  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,12 +66,28 @@ const Chat: React.FC = () => {
     setIsDictating(false);
   }, []);
 
+  const stopPlayingAudio = useCallback(() => {
+    if (currentAudioSourceRef.current) {
+      currentAudioSourceRef.current.stop();
+      currentAudioSourceRef.current.onended = null; // Clear handler
+      currentAudioSourceRef.current = null;
+    }
+    if (outputAudioContextRef.current) {
+      outputAudioContextRef.current.close().then(() => {
+        outputAudioContextRef.current = null;
+      });
+    }
+    setIsPlayingAudio(false);
+    setCurrentlyPlayingMessageId(null); // Clear currently playing message ID
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopDictation();
+      stopPlayingAudio();
     };
-  }, [stopDictation]);
+  }, [stopDictation, stopPlayingAudio]);
 
   const startDictation = useCallback(async () => {
     try {
@@ -124,12 +147,73 @@ const Chat: React.FC = () => {
     }
   };
 
+  const playMessageAudio = async (messageId: number, text: string) => {
+    // If audio is currently playing, stop it first
+    if (isPlayingAudio) {
+      stopPlayingAudio();
+      // Give a small delay to ensure cleanup before starting new audio
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Set loading/playing state for this specific action
+    setIsPlayingAudio(true);
+    setCurrentlyPlayingMessageId(messageId);
+    
+    // Stop dictation if active
+    if (isDictating) stopDictation();
+
+    try {
+      // Recreate AudioContext each time to ensure clean state and avoid issues with closed contexts.
+      outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+
+      const audioResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          // Use 'Kore' for the confessor's voice, matching Codex modal
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+        },
+      });
+
+      const audioData = audioResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (audioData && outputAudioContextRef.current) {
+        const audioBuffer = await decodeAudioData(
+          decode(audioData),
+          outputAudioContextRef.current,
+          24000,
+          1,
+        );
+        const source = outputAudioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(outputAudioContextRef.current.destination);
+        
+        // When audio ends, ensure state is reset
+        source.onended = () => {
+          stopPlayingAudio(); // This will clear currentlyPlayingMessageId
+        };
+        
+        source.start();
+        currentAudioSourceRef.current = source;
+      } else {
+        throw new Error("No audio data received or context not available.");
+      }
+    } catch (err) {
+      console.error("Failed to play audio message:", err);
+      // Optionally show a user-facing error
+      stopPlayingAudio(); // Ensure state is reset on error
+    }
+    // No finally block, onended or catch handles state reset.
+  };
+
 
   const sendMessage = async () => {
     if (isDictating) stopDictation();
+    if (isPlayingAudio) stopPlayingAudio(); // Stop TTS if playing
     if (!input.trim() || isLoading) return;
     setIsLoading(true);
-    const userMessage: Message = { role: 'user', text: input };
+    const userMessage: Message = { id: messages.length + 1, role: 'user', text: input }; // Assign ID
     setMessages(prev => [...prev, userMessage]);
     setInput('');
 
@@ -145,6 +229,7 @@ const Chat: React.FC = () => {
       });
       
       const modelMessage: Message = { 
+        id: messages.length + 2, // Assign ID
         role: 'model', 
         text: response.text, 
         signature: "Jesus is Lord. Say it. We're listening."
@@ -153,7 +238,7 @@ const Chat: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      const errorMessage: Message = { role: 'model', text: 'Error: The signal is weak. Could not connect to the AI Core.' };
+      const errorMessage: Message = { id: messages.length + 2, role: 'model', text: 'Error: The signal is weak. Could not connect to the AI Core.' }; // Assign ID
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -163,6 +248,7 @@ const Chat: React.FC = () => {
   const findEntities = async () => {
     if (messages.length <= 1 || isFindingEntities) return;
     if (isDictating) stopDictation();
+    if (isPlayingAudio) stopPlayingAudio(); // Stop TTS if playing
     setIsFindingEntities(true);
     setIdentifiedEntities([]);
     setFindEntitiesError(null);
@@ -212,12 +298,28 @@ ${conversationHistory}`;
       <div className="flex-grow overflow-y-auto pr-2">
         <div className="space-y-4">
           {messages.map((msg, index) => (
-            <div key={index} className={`flex items-start space-x-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+            <div key={msg.id || index} className={`flex items-start space-x-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
               {msg.role === 'model' && <ShieldAlert className="w-6 h-6 text-yellow-400 flex-shrink-0" />}
-              <div className={`p-3 rounded-lg border max-w-lg ${msg.role === 'user' ? 'user-message' : 'model-message-confessor'}`}>
+              <div className={`p-3 rounded-lg border max-w-lg relative ${msg.role === 'user' ? 'user-message' : 'model-message-confessor'}`}>
                 <p className="whitespace-pre-wrap">{msg.text}</p>
                  {msg.signature && (
                   <p className="signature">{msg.signature}</p>
+                )}
+                {msg.role === 'model' && (
+                  <button
+                    onClick={() => {
+                      if (currentlyPlayingMessageId === msg.id) {
+                        stopPlayingAudio();
+                      } else {
+                        playMessageAudio(msg.id, msg.text);
+                      }
+                    }}
+                    className="absolute -right-10 top-1/2 -translate-y-1/2 text-cyan-300 hover:text-white p-1 rounded-full holographic-button focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    aria-label={currentlyPlayingMessageId === msg.id ? 'Stop audio' : 'Play audio'}
+                    disabled={isLoading || isFindingEntities}
+                  >
+                    {currentlyPlayingMessageId === msg.id ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
                 )}
               </div>
               {msg.role === 'user' && <User className="w-6 h-6 text-cyan-200 flex-shrink-0" />}
@@ -241,15 +343,15 @@ ${conversationHistory}`;
             onKeyPress={e => e.key === 'Enter' && sendMessage()}
             placeholder={isDictating ? "Listening..." : "Confess what you have seen..."}
             className="holographic-input flex-grow p-2 rounded-md"
-            disabled={isLoading || isFindingEntities}
+            disabled={isLoading || isFindingEntities || isPlayingAudio}
           />
-           <button onClick={handleToggleDictation} disabled={isLoading || isFindingEntities} className={`holographic-button p-2 rounded-md ${isDictating ? 'bg-red-500/30 border-red-500/50' : ''}`}>
+           <button onClick={handleToggleDictation} disabled={isLoading || isFindingEntities || isPlayingAudio} className={`holographic-button p-2 rounded-md ${isDictating ? 'bg-red-500/30 border-red-500/50' : ''}`}>
             <Mic className={`w-5 h-5 ${isDictating ? 'animate-pulse' : ''}`} />
           </button>
-          <button onClick={sendMessage} disabled={isLoading || isFindingEntities || !input.trim()} className="holographic-button p-2 rounded-md">
+          <button onClick={sendMessage} disabled={isLoading || isFindingEntities || !input.trim() || isPlayingAudio} className="holographic-button p-2 rounded-md">
             <Send className="w-5 h-5" />
           </button>
-          <button onClick={findEntities} disabled={isLoading || isFindingEntities || messages.length <= 1} className="holographic-button p-2 rounded-md">
+          <button onClick={findEntities} disabled={isLoading || isFindingEntities || messages.length <= 1 || isPlayingAudio} className="holographic-button p-2 rounded-md">
              {isFindingEntities ? (
                 <div className="w-5 h-5 flex items-center justify-center">
                     <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>

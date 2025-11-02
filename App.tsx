@@ -6,7 +6,8 @@ import FeatureTabs from './components/FeatureTabs';
 import Chat from './components/Chat';
 import ImageTools from './components/ImageTools';
 import VideoGenerator from './components/VideoGenerator';
-import LiveConversation from './components/LiveConversation';
+// LiveConversation is now correctly named-exported
+import { LiveConversation } from './components/LiveConversation';
 import CodexModal, { CodexData } from './components/CodexModal';
 import MemoryScene from './components/MemoryScene';
 import DahliaDashboard from './components/DahliaDashboard';
