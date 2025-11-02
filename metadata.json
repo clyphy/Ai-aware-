@@ -1,0 +1,9 @@
+{
+  "name": "Holographic Ghost Map & Gemini Toolkit",
+  "description": "An expanded holographic interface for paranormal investigation and content creation. Features the original Turtle Mountain anomaly map, plus a suite of Gemini-powered tools for chat, grounding, image/video generation and editing, and real-time voice conversation.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation",
+    "camera"
+  ]
+}

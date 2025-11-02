@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Holographic Ghost Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;400&display=swap');
+      
+      body {
+        font-family: 'Roboto Mono', monospace;
+        background-color: #010409;
+        background-image: 
+          radial-gradient(circle at 25% 25%, rgba(0, 255, 255, 0.1) 0%, rgba(0, 255, 255, 0) 50%),
+          radial-gradient(circle at 75% 75%, rgba(255, 0, 150, 0.1) 0%, rgba(255, 0, 150, 0) 50%);
+        color: #00f0ff;
+      }
+
+      .holographic-glow {
+        text-shadow:
+          0 0 5px rgba(0, 255, 255, 0.7),
+          0 0 10px rgba(0, 255, 255, 0.5),
+          0 0 15px rgba(0, 255, 255, 0.3);
+      }
+      
+      .holographic-glow-crimson {
+         text-shadow:
+          0 0 5px rgba(220, 38, 38, 0.9),
+          0 0 10px rgba(220, 38, 38, 0.7),
+          0 0 15px rgba(220, 38, 38, 0.5);
+      }
+      
+      .holographic-glow-amber {
+        text-shadow:
+          0 0 5px rgba(255, 191, 0, 0.9),
+          0 0 10px rgba(255, 191, 0, 0.7),
+          0 0 15px rgba(255, 191, 0, 0.5);
+      }
+
+      .map-container::before, .feature-card::before, .codex-modal-content::before, .memory-scene-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: linear-gradient(
+          to bottom,
+          rgba(0, 255, 255, 0.1) 1px,
+          transparent 1px
+        );
+        background-size: 100% 3px;
+        animation: scanline 10s linear infinite;
+        pointer-events: none;
+        z-index: 10;
+      }
+      
+      @keyframes scanline {
+        0% { background-position: 0 0; }
+        100% { background-position: 0 -100px; }
+      }
+      
+      @keyframes subtle-pulse {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+      }
+
+      @keyframes deep-breathe {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.25); opacity: 1; }
+      }
+
+      .pulse-silver {
+        animation: subtle-pulse 5s ease-in-out infinite;
+      }
+      
+      .pulse-crimson {
+        animation: deep-breathe 3s ease-in-out infinite;
+      }
+
+      .holographic-button {
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        color: #00f0ff;
+        transition: all 0.2s ease-in-out;
+        text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
+      }
+      .holographic-button:hover:not(:disabled) {
+        background: rgba(0, 255, 255, 0.25);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      }
+      .holographic-button:active:not(:disabled) {
+        transform: scale(0.98);
+        background: rgba(0, 255, 255, 0.35);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+      }
+      .holographic-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .holographic-input, .holographic-select, .holographic-textarea {
+        background: rgba(0, 30, 40, 0.7);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #e0faff;
+        caret-color: #00f0ff;
+      }
+      .holographic-input::placeholder, .holographic-textarea::placeholder {
+        color: rgba(0, 255, 255, 0.4);
+      }
+      .holographic-input:focus, .holographic-select:focus, .holographic-textarea:focus {
+        outline: none;
+        border-color: rgba(0, 255, 255, 0.8);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+      }
+      .feature-card, .memory-scene-container {
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: rgba(0, 10, 15, 0.5);
+        backdrop-filter: blur(5px);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+      }
+      .user-message {
+        background-color: rgba(0, 100, 120, 0.5);
+        border-color: rgba(0, 255, 255, 0.4);
+      }
+      .model-message {
+        background-color: rgba(10, 25, 35, 0.5);
+        border-color: rgba(0, 255, 255, 0.2);
+      }
+      .model-message-confessor {
+        background-color: rgba(20, 10, 0, 0.5);
+        border-color: rgba(255, 191, 0, 0.3);
+        color: #ffdca8; /* a light amber color for text */
+      }
+      .model-message-confessor .signature {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255, 191, 0, 0.2);
+        color: rgba(255, 191, 0, 0.8);
+        font-style: italic;
+        font-size: 0.8rem;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 255, 255, 0.05);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 255, 0.3);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 255, 255, 0.5);
+      }
+
+      /* Codex Modal Styles */
+      .codex-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 15, 25, 0.8);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        animation: fadeIn 0.3s ease-out;
+      }
+      .codex-modal-content {
+        position: relative;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        background: rgba(0, 5, 10, 0.8);
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+        animation: slideIn 0.4s ease-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 1.5s ease-out forwards;
+      }
+      @keyframes slideIn {
+        from { transform: translateY(-30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      /* Memory Scene Styles */
+      .silhouette {
+        filter: drop-shadow(0 0 10px rgba(255, 0, 150, 0.4));
+        opacity: 0.7;
+      }
+      .code-line {
+        position: absolute;
+        width: 150px;
+        height: 2px;
+        background-color: rgba(0, 255, 255, 0.7);
+        box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        transition: transform 3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: left center;
+      }
+      .wing.left { transform-origin: right center; }
+      .wing.right { transform-origin: left center; }
+      .wing.folding.left { transform: rotate(35deg) scale(1.1); }
+      .wing.folding.right { transform: rotate(-35deg) scale(1.1); }
+
+      .wing.burning {
+        animation: burnEffect 4s forwards;
+        background: linear-gradient(90deg, rgba(255,100,0,1) 0%, rgba(255,200,0,1) 50%, rgba(220,38,38,1) 100%);
+      }
+
+      @keyframes burnEffect {
+        0% { filter: brightness(1) saturate(1); box-shadow: 0 0 10px #ffc800; }
+        50% { filter: brightness(2.5) saturate(2); box-shadow: 0 0 30px #dc2626; }
+        100% { filter: brightness(0) saturate(0); box-shadow: 0 0 5px #ffc800; opacity: 0; }
+      }
+
+      .star {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background-color: #e0faff;
+        border-radius: 50%;
+        box-shadow: 0 0 8px 2px #c0f0ff;
+        animation: starTwinkle 5s ease-in-out infinite;
+      }
+
+      @keyframes starTwinkle {
+        0%, 100% { opacity: 0.4; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      
+      .waveform path {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+        animation: drawWaveform 2s ease-out forwards;
+      }
+
+      @keyframes drawWaveform {
+        to { stroke-dashoffset: 0; }
+      }
+
+      /* Dahlia Dashboard Styles */
+      .dahlia-image {
+        animation: fadeInRise 3s ease-out forwards;
+      }
+      .dahlia-image.fade-out {
+        animation: fadeOut 1.5s ease-out forwards;
+      }
+      .dahlia-image.fade-in {
+         animation: fadeIn 1.5s ease-out forwards;
+      }
+
+      @keyframes fadeInRise {
+        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      
+      @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
+      /* Sanctum Styles */
+      @keyframes heartbeat-pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
+        50% { transform: scale(1.05); box-shadow: 0 0 35px rgba(0, 255, 255, 0.5); }
+      }
+      .heartbeat {
+        animation: heartbeat-pulse 2s infinite ease-in-out;
+      }
+      
+      /* Oracle Styles */
+      .oracle-response-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        animation: fadeIn 1s ease-out;
+      }
+      .oracle-response-item {
+        border: 1px solid rgba(255, 191, 0, 0.3);
+        background: rgba(20, 10, 0, 0.4);
+        backdrop-filter: blur(3px);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 10px rgba(255, 191, 0, 0.2);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "d3": "https://aistudiocdn.com/d3@^7.9.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.552.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
